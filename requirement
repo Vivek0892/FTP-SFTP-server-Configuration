@@ -1,0 +1,7 @@
+GOAL: Enable file transaction to servers using file transfer protocol[FTP]
+
+1. configure sftp in an instance such that, it can receive files via port number 22 to the specific directory as the specific user.ie, the sftp users have restricted privileges.
+2. verify the working with any FTP client like filezilla, cyberduck etc.
+
+3. install and configure vsftp in an instance such that, it can receive files very securely via port 21 to the configured directory as configures user.for Vsftp also privileges are restricted.
+4. verify the working with any FTP client.

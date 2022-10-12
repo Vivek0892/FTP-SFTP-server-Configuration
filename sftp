@@ -1,0 +1,46 @@
+configure sftp in an instance such that, it can receive files via port number 22 to the specific directory as the specific user.ie, the sftp users have restricted privileges.
+
+Os used: Rhel 8
+Platform: AWS
+
+Package needed  SSHD
+Configuration file /etc/ssh/sshd_config
+
+Create an user with deny shell access and give passwd
+      eg: #useradd -s /bin/false sftpuser
+	    # passwd sftpuser
+
+Create a directory Where the sftp user need to access
+	eg: #mkdir -p /var/sftp/files
+
+Change ownership of “files” directory to access and modified by sftpuser
+  	eg: #chown sftpuser:sftpuser /var/sftp/files
+
+Change ownership of “sftp” dir to deny access to other dir while sftp
+	eg: #chown root:root /var/sftp
+
+Change Permision of “sftp” dir to rwxr-xr-x
+	eg: #chmod 755 /var/sftp
+
+Modify the Configuration file /etc/ssh/sshd_config
+	eg: # vim /etc/ssh/sshd_config <-
+=>Match User sftpuser
+        ForceCommand internal-sftp
+        PasswordAuthentication yes
+        ChrootDirectory /var/sftp
+        PermitTunnel no
+        AllowAgentForwarding no
+        AllowTcpForwarding no
+        X11Forwarding no
+
+Restart SSHD service
+	eg #systemctl restsrt sshd.service
+
+Check The connect using Filezilla
+  -> open filezilla
+  file->site manager-> general
+Protocol : sftp
+hostname: “here aws public dns”
+logintype : “ ask for passwd”
+then click Connect.
+Complete The Authentication -> successfully Conected

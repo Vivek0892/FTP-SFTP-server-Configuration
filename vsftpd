@@ -1,0 +1,89 @@
+install and configure vsftp in an instance such that, it can receive files very securely via port 21 to the configured directory as configures user.for Vsftp also privileges are restricted
+
+Os: RHEL 8
+Platform: AWS
+
+Package VSFTPD
+Configuration /etc/vsftpd/vsftpd.conf
+VSFTPD, short for Very Secure FTP daemon, is a secure FTP daemon that is an upgrade of FTP protocol. It enforces secure connections to FTP servers by encrypting traffic send to and from the server, and by so doing, the file transfer is kept safe and secure from hackers.
+
+Install vsftpd
+$ sudo dnf install vsftpd
+
+Start and Enable vsftpd
+ $ sudo systemctl enable –now vsftpd
+Create ftp user and its directory
+ $ sudo adduser ftpuser
+ $ sudo passwd ftpuser
+ $ sudo mkdir -p /home/ftpuser/ftp_dir
+Assigning Permisiion and Ownership to The Directory
+ $ sudo chmod -R 750 /home/ftpuser/ftp_dir
+ $ sudo chown -R ftpuser: /home/ftpuser/ftp_dir
+Add the FTP user to the /etc/vsftpd/user_list file to allow the user access to the vsftp server.
+  $ sudo bash -c 'echo ftpuser >> /etc/vsftpd/user_list
+Cinfigure SFTPD via its configuration file
+The default configuration file for vsftpd is the /etc/vsftpd/vsftpd.conf file. The file is replete with directives that help fortify your FTP server’s security
+To allow local users to access the FTP server remotely, and block anonymous users
+anonymous_enable=NO
+local_enable=YES
+
+To grant users rights to run any FTP command & make changes such as uploading, downloading and deleting files
+write_enable=YES
+
+For security purposes, you may opt to restrict users from accessing any files & directories outside their home directories
+chroot_local_user=YES
+
+To grant users write access to their respective home directories
+allow_writeable_chroot=YES
+
+define custom ports to enable Passive FTP connections. In this case, we will specify ports 30000 and 31000. We shall later open these on the firewall
+pasv_min_port=30000
+pasv_max_port=31000
+
+only allow the users defined in the /etc/vsftpd/user_list access to the server and block the rest
+userlist_file=/etc/vsftpd/user_list
+userlist_deny=NO
+
+ restart the Vsftpd service.
+
+ $ sudo systemctl restart vsftpd
+
+To encrypt communications between the server and a client system, we need to generate a TLS certificate and later configure the server to use it.
+$ sudo openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout /etc/vsftpd.pem -out /etc/vsftpd/vsftpd.pem
+
+req- is a command for X.509 Certificate Signing Request (CSR) management.
+    • x509- means X.509 certificate data management.
+    • days- defines number of days certificate is valid for.
+    • newkey- specifies certificate key processor.
+    • rsa:2048- RSA key processor, will generate a 2048 bit private key.
+    • keyout- sets the key storage file.
+    • out- sets the certificate storage file.
+      
+the above command will ask you to answer the questions below:
+Country Name (2 letter code) [XX]: the ISO 3166-1 two-letter country code for your country. Example: US
+    • State or Province Name (full name) []: the state or province name. Example: Massachusetts
+    • Locality Name (eg, city) [Default City]: the city of the service. Example: Boston
+    • Organization Name (eg, company) [Default Company Ltd]: the FTP company name. Example: Example.com
+    • Organizational Unit Name (eg, section) []: The company main area of interest. Example: Information Technology
+    • Common Name (eg, your name or your server's hostname) []: the hostname required to connect to the FTP server. Example: example.com
+    • Email Address []: the admin e-mail address. Example: ftp-admin@example.com
+The most important line is the one that requests theCommon Name: we need to enter the domain name associated with our server or our server's public IP address.
+Here also need to tell the server where the certificate files are stored. So, head back to the configuration file /etc/vsftpd/vsftpd.conf and specify the path to the certificate files.
+
+rsa_cert_file=/etc/vsftpd/vsftpd.pem
+rsa_private_key_file=/etc/vsftpd.pem
+ instruct the server to turn on SSL.$ sudo firewall-cmd --relo­ad
+ssl_enable=YES
+
+restart vsftpd service,
+$ sudo systemctl restart vsftpd
+
+If you are running a firewall, you need to allow these salient ports”
+20 – to allow FTP traffic
+      21 – FTP data port
+      30000-31000 – To allow passive communication with the FTP server.
+
+$ sudo firewall-cmd --permanent –add-port=20-21/tcp
+$ sudo firewall-cmd --permanent --add-port=30000-31000/tcp
+$ sudo firewall-cmd --reload
+
